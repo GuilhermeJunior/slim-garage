@@ -2,9 +2,6 @@ package dev.stormgui.slim_garage.domain.entities
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
@@ -14,17 +11,25 @@ import java.time.LocalDateTime
 @Entity
 @Table(name = "parking_registry")
 class ParkingRegistryEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
-    val id: Long? = null,
-
     @ManyToOne
     @JoinColumn(name = "spot_id")
-    var spot: SpotEntity,
-    var datStart: LocalDateTime,
-    var datEnd: LocalDateTime,
-    var licensePlate: String,
-    var revenue: BigDecimal
-) {
-}
+    val spot: SpotEntity,
+
+    @Column(name = "dat_start")
+    val datStart: LocalDateTime,
+
+    @Column(name = "dat_end")
+    var datEnd: LocalDateTime? = null,
+
+    @Column(name = "des_license_plate")
+    val licensePlate: String,
+
+    @Column(name = "qty_revenue")
+    var revenue: BigDecimal,
+
+    @Column(name = "pct_price_discount")
+    val percentPriceDiscount: BigDecimal,
+
+    @Column(name = "pct_price_increase")
+    val percentPriceIncrease: BigDecimal
+) : BaseEntity()
