@@ -25,7 +25,7 @@ class ParkingRegistryEntity(
     val licensePlate: String,
 
     @Column(name = "qty_revenue")
-    var revenue: BigDecimal,
+    val revenue: BigDecimal,
 
     @Column(name = "pct_price_discount")
     val percentPriceDiscount: BigDecimal,
