@@ -81,6 +81,10 @@ class ParkingRegistryService(
         val register = parkingRegistryRepository.findByLicensePlateAndDatEndIsNull(entry.licensePlate)
             ?: throw NotFoundException("License plate=${entry.licensePlate} not found")
 
+        require(exitTime.isAfter(register.datStart)) {
+            "Exit time cannot be before entry time, exitTime=$exitTime, entryTime=${register.datStart}"
+        }
+
         val spot = register.spot
         spot.isTaken = false
 
