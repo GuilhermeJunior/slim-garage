@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 
 interface ParkingRegistryEntityRepository : JpaRepository<ParkingRegistryEntity, Long> {
 
-    fun findByLicensePlate(licensePlate: String): ParkingRegistryEntity?
+    fun findByLicensePlateAndDatEndIsNull(licensePlate: String): ParkingRegistryEntity?
 
     @Query(
         ("SELECT p FROM ParkingRegistryEntity p " +

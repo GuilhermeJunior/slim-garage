@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.Duration
-import java.time.LocalDateTime
 import kotlin.math.ceil
 
 @Service
@@ -40,6 +39,11 @@ class ParkingRegistryService(
     }
 
     fun park(entry: WebHookRequest): WebhookResponse {
+        val entryTime = entry.entryTime ?: throw IllegalArgumentException("Entry time is required for parking")
+
+        // validar caso placa ja esteja estacionada
+        validateLicensePlate(entry)
+
         val spots = spotRepository.findByIsTaken(false)
 
         if (spots.isEmpty()) {
@@ -53,7 +57,7 @@ class ParkingRegistryService(
 
         val register = ParkingRegistryEntity(
             spot = spot,
-            datStart = entry.entryTime,
+            datStart = entryTime,
             licensePlate = entry.licensePlate,
             revenue = BigDecimal.ZERO,
             percentPriceDiscount = discount,
@@ -73,7 +77,8 @@ class ParkingRegistryService(
     }
 
     fun exit(entry: WebHookRequest): WebhookResponse {
-        val register = parkingRegistryRepository.findByLicensePlate(entry.licensePlate)
+        val exitTime = entry.exitTime ?: throw IllegalArgumentException("Exit time is required for exit")
+        val register = parkingRegistryRepository.findByLicensePlateAndDatEndIsNull(entry.licensePlate)
             ?: throw NotFoundException("License plate=${entry.licensePlate} not found")
 
         val spot = register.spot
@@ -81,18 +86,21 @@ class ParkingRegistryService(
 
         spotRepository.save(spot)
 
-        register.datEnd = LocalDateTime.now()
+        register.datEnd = exitTime
         register.revenue = calculateRevenue(register, spot)
 
         parkingRegistryRepository.save(register)
 
         return WebhookResponse(
             licensePlate = register.licensePlate,
-            entryTime = register.datStart,
-            eventType = EventType.EXIT,
-            lat = spot.latitude,
-            lng = spot.longitude
+            exitTime = exitTime,
+            eventType = EventType.EXIT
         )
+    }
+
+    private fun validateLicensePlate(entry: WebHookRequest) {
+        val register = parkingRegistryRepository.findByLicensePlateAndDatEndIsNull(entry.licensePlate)
+        require(register == null) { "License plate=${entry.licensePlate} is already parked" }
     }
 
     private fun calculateRevenue(
@@ -121,7 +129,9 @@ class ParkingRegistryService(
     private fun calculatePercentage(spot: SpotEntity, allSpotsCount: Int): Pair<BigDecimal, BigDecimal> {
         val spotsSectorCount = spotRepository.countBySectorAndIsTaken(spot.sector, true)
 
-        val sectorOccupationPercent = (spotsSectorCount.toBigDecimal() * allSpotsCount.toBigDecimal()) * BigDecimal(100)
+        val sectorOccupationPercent = (spotsSectorCount.toBigDecimal() * allSpotsCount.toBigDecimal()) / BigDecimal(100)
+
+        LOG.info("M=calculatePercentage sector={} occupationPercent={}", spot.sector.name, sectorOccupationPercent)
 
         var discount = BigDecimal.ZERO
         var increase = BigDecimal.ZERO
