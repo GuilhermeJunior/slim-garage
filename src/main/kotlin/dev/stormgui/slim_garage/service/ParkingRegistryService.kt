@@ -37,24 +37,6 @@ class ParkingRegistryService(
         }
     }
 
-    private fun calculatePercentage(spot: SpotEntity, allSpotsCount: Int): Pair<BigDecimal, BigDecimal> {
-        val spotsSectorCount = spotRepository.countBySectorAndIsTaken(spot.sector, true)
-
-        val sectorOccupationPercent = (spotsSectorCount.toBigDecimal() * allSpotsCount.toBigDecimal()) * BigDecimal(100)
-
-        var discount = BigDecimal.ZERO
-        var increase = BigDecimal.ZERO
-
-        when {
-            sectorOccupationPercent < BigDecimal(25) -> discount = BigDecimal("0.10")
-            sectorOccupationPercent <= BigDecimal(50) -> discount = BigDecimal.ZERO
-            sectorOccupationPercent <= BigDecimal(75) -> increase = BigDecimal("0.10")
-            else -> increase = BigDecimal("0.25")
-        }
-
-        return Pair(discount, increase)
-    }
-
     fun park(entry: WebHookRequest): WebhookResponse {
         val spots = spotRepository.findByIsTaken(false)
 
@@ -130,5 +112,23 @@ class ParkingRegistryService(
             .add(basePrice.multiply(register.percentPriceIncrease))
 
         return price.multiply(hoursCharged.toBigDecimal())
+    }
+
+    private fun calculatePercentage(spot: SpotEntity, allSpotsCount: Int): Pair<BigDecimal, BigDecimal> {
+        val spotsSectorCount = spotRepository.countBySectorAndIsTaken(spot.sector, true)
+
+        val sectorOccupationPercent = (spotsSectorCount.toBigDecimal() * allSpotsCount.toBigDecimal()) * BigDecimal(100)
+
+        var discount = BigDecimal.ZERO
+        var increase = BigDecimal.ZERO
+
+        when {
+            sectorOccupationPercent < BigDecimal(25) -> discount = BigDecimal("0.10")
+            sectorOccupationPercent <= BigDecimal(50) -> discount = BigDecimal.ZERO
+            sectorOccupationPercent <= BigDecimal(75) -> increase = BigDecimal("0.10")
+            else -> increase = BigDecimal("0.25")
+        }
+
+        return Pair(discount, increase)
     }
 }

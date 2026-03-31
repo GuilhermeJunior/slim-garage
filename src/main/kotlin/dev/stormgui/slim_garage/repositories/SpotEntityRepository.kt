@@ -8,4 +8,6 @@ interface SpotEntityRepository : JpaRepository<SpotEntity, Long> {
     fun findByIsTaken(isTaken: Boolean): List<SpotEntity>
 
     fun countBySectorAndIsTaken(sector: SectorEntity, isTaken: Boolean): Long
+
+    fun findBySector(sector: SectorEntity): List<SpotEntity>
 }
