@@ -2,6 +2,7 @@ package dev.stormgui.slim_garage.service
 
 import dev.stormgui.slim_garage.domain.dtos.RevenueEntry
 import dev.stormgui.slim_garage.domain.dtos.RevenueResponse
+import dev.stormgui.slim_garage.exceptions.NotFoundException
 import dev.stormgui.slim_garage.repositories.ParkingRegistryEntityRepository
 import dev.stormgui.slim_garage.repositories.SectorRepository
 import org.springframework.stereotype.Service
@@ -14,9 +15,10 @@ class RevenueService(
     private val sectorRepository: SectorRepository
 ) {
     fun getRevenue(revenueEntry: RevenueEntry): RevenueResponse {
-        val sector = sectorRepository.findByName(revenueEntry.sector) ?: throw RuntimeException("no sector")
-        val startDate = revenueEntry.date.toLocalDate().atStartOfDay()
-        val endDate = revenueEntry.date.toLocalDate().plusDays(1).atStartOfDay()
+        val sector = sectorRepository.findByName(revenueEntry.sector)
+            ?: throw NotFoundException("Sector=${revenueEntry.sector} not found")
+        val startDate = revenueEntry.date.atStartOfDay()
+        val endDate = revenueEntry.date.plusDays(1).atStartOfDay()
         val registers = parkingRegistryRepository.findBySectorAndDate(sector, startDate, endDate)
 
         if (registers.isEmpty()) {

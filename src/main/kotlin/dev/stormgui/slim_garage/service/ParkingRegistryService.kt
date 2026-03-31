@@ -5,6 +5,8 @@ import dev.stormgui.slim_garage.domain.dtos.WebhookResponse
 import dev.stormgui.slim_garage.domain.entities.ParkingRegistryEntity
 import dev.stormgui.slim_garage.domain.entities.SpotEntity
 import dev.stormgui.slim_garage.domain.enums.EventType
+import dev.stormgui.slim_garage.exceptions.FullGarageException
+import dev.stormgui.slim_garage.exceptions.NotFoundException
 import dev.stormgui.slim_garage.repositories.ParkingRegistryEntityRepository
 import dev.stormgui.slim_garage.repositories.SpotEntityRepository
 import org.slf4j.LoggerFactory
@@ -33,14 +35,16 @@ class ParkingRegistryService(
         return when (entry.eventType) {
             EventType.ENTRY -> park(entry)
             EventType.EXIT -> exit(entry)
-            else -> error("Unknown event type: ${entry.eventType}")
+            else -> throw IllegalArgumentException("Invalid event type: ${entry.eventType}")
         }
     }
 
     fun park(entry: WebHookRequest): WebhookResponse {
         val spots = spotRepository.findByIsTaken(false)
 
-        require(spots.isNotEmpty()) { "Garage has no spots" }
+        if (spots.isEmpty()) {
+            throw FullGarageException("Garage is full, no available spots")
+        }
 
         val spot = spots.first()
         spot.isTaken = true
@@ -70,7 +74,7 @@ class ParkingRegistryService(
 
     fun exit(entry: WebHookRequest): WebhookResponse {
         val register = parkingRegistryRepository.findByLicensePlate(entry.licensePlate)
-            ?: throw RuntimeException("License Plate not found")
+            ?: throw NotFoundException("License plate=${entry.licensePlate} not found")
 
         val spot = register.spot
         spot.isTaken = false
