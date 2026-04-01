@@ -25,7 +25,7 @@ class GlobalExceptionHandler {
             message = exception.message ?: "Garagem cheia, nenhuma vaga disponível",
             timestamp = System.currentTimeMillis()
         )
-        return ResponseEntity(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY)
+        return ResponseEntity(errorResponse, HttpStatus.UNPROCESSABLE_CONTENT)
     }
 
     @ExceptionHandler(IllegalArgumentException::class)

@@ -22,7 +22,7 @@ class RevenueService(
         val registers = parkingRegistryRepository.findBySectorAndDate(sector, startDate, endDate)
 
         if (registers.isEmpty()) {
-            throw RuntimeException("no registers")
+            throw NotFoundException("no registers")
         }
 
         val amount = registers.map { it.revenue }
