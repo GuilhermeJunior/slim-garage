@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface SpotEntityRepository : JpaRepository<SpotEntity, Long> {
     fun findByIsTaken(isTaken: Boolean): List<SpotEntity>
 
-    fun countBySectorAndIsTaken(sector: SectorEntity, isTaken: Boolean): Long
+    fun countByIsTaken(isTaken: Boolean): Long
 
     fun findBySector(sector: SectorEntity): List<SpotEntity>
 }

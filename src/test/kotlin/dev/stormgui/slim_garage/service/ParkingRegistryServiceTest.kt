@@ -10,18 +10,18 @@ import dev.stormgui.slim_garage.exceptions.FullGarageException
 import dev.stormgui.slim_garage.exceptions.NotFoundException
 import dev.stormgui.slim_garage.repositories.ParkingRegistryEntityRepository
 import dev.stormgui.slim_garage.repositories.SpotEntityRepository
-import io.mockk.Runs
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.slot
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
@@ -38,6 +38,11 @@ class ParkingRegistryServiceTest {
     @InjectMockKs
     private lateinit var parkingRegistryService: ParkingRegistryService
 
+    @BeforeEach
+    fun setUp() {
+        every { spotRepository.findAll().count() } returns 100
+    }
+
     @Test
     fun `should successfully park a car`() {
         val registrySlot = slot<ParkingRegistryEntity>()
@@ -49,7 +54,7 @@ class ParkingRegistryServiceTest {
 
         every { parkingRegistryRepository.findByLicensePlateAndDatEndIsNull(request.licensePlate) } returns null
         every { spotRepository.findByIsTaken(false) } returns mockSpotList()
-        every { spotRepository.countBySectorAndIsTaken(any(), any()) } returns 0
+        every { spotRepository.countByIsTaken(true) } returns 0
 
         every { parkingRegistryRepository.save(capture(registrySlot)) } returns mockk()
         every { spotRepository.save(any()) } returns mockk()
@@ -62,6 +67,57 @@ class ParkingRegistryServiceTest {
         assertEquals(BigDecimal.ZERO, registrySlot.captured.revenue)
         assertEquals(BigDecimal("0.10"), registrySlot.captured.percentPriceDiscount)
         assertEquals(BigDecimal.ZERO, registrySlot.captured.percentPriceIncrease)
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = ["20,0.10,0", "50,0,0", "75,0,0.10", "80,0,0.25"])
+    fun `should successfully park a car and provide discount and increase price`(spotsTakenCount: Long,
+                                                                                expectedDiscount: String,
+                                                                                expectedIncrease: String) {
+        val registrySlot = slot<ParkingRegistryEntity>()
+        val request = WebHookRequest(
+            licensePlate = "ABC-1234",
+            eventType = EventType.ENTRY,
+            entryTime = LocalDateTime.now()
+        )
+
+        every { parkingRegistryRepository.findByLicensePlateAndDatEndIsNull(request.licensePlate) } returns null
+        every { spotRepository.findByIsTaken(false) } returns mockSpotList()
+        every { spotRepository.countByIsTaken(true) } returns spotsTakenCount
+
+        every { parkingRegistryRepository.save(capture(registrySlot)) } returns mockk()
+        every { spotRepository.save(any()) } returns mockk()
+
+        parkingRegistryService.register(request)
+
+        assertEquals(BigDecimal(expectedDiscount), registrySlot.captured.percentPriceDiscount)
+        assertEquals(BigDecimal(expectedIncrease), registrySlot.captured.percentPriceIncrease)
+
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = ["30,0", "60,10", "90,20"])
+    fun `should successfully exit park a car and calculate price`(minutes: Long, expectedPriceValue: String) {
+        val time = LocalDateTime.now()
+        val registrySlot = slot<ParkingRegistryEntity>()
+        val request = WebHookRequest(
+            licensePlate = "ABC-1234",
+            eventType = EventType.EXIT,
+            exitTime = time
+        )
+
+        val register = mockParkingRegistry(parameterDate = time.minusMinutes(minutes))
+
+        every { parkingRegistryRepository.findByLicensePlateAndDatEndIsNull(request.licensePlate) } returns register
+
+        every { parkingRegistryRepository.save(capture(registrySlot)) } returns mockk()
+        every { spotRepository.save(any()) } returns mockk()
+
+        val result = parkingRegistryService.register(request)
+
+        assertEquals(request.exitTime, registrySlot.captured.datEnd)
+        assertEquals(EventType.EXIT, result.eventType)
+        assertEquals(BigDecimal(expectedPriceValue), registrySlot.captured.revenue)
     }
 
     @Test
@@ -185,7 +241,7 @@ class ParkingRegistryServiceTest {
     }
 
 
-    private fun mockParkingRegistry(): ParkingRegistryEntity {
+    private fun mockParkingRegistry(parameterDate: LocalDateTime = LocalDateTime.now()): ParkingRegistryEntity {
         return ParkingRegistryEntity(
             spot = SpotEntity(
                 sector = SectorEntity(
@@ -197,7 +253,7 @@ class ParkingRegistryServiceTest {
                 ), latitude = 0, longitude = 0, isTaken = true
 
             ),
-            datStart = LocalDateTime.now(),
+            datStart = parameterDate,
             datEnd = null,
             licensePlate = "",
             revenue = BigDecimal.ZERO,

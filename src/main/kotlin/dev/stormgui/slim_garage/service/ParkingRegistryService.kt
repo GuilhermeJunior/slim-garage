@@ -54,9 +54,10 @@ class ParkingRegistryService(
         }
 
         val spot = spots.first()
-        spot.isTaken = true
 
-        val (discount, increase) = calculatePercentage(spot, spots.count())
+        val (discount, increase) = calculatePercentage(spot)
+
+        spot.isTaken = true
 
         val register = ParkingRegistryEntity(
             spot = spot,
@@ -133,8 +134,9 @@ class ParkingRegistryService(
         return price.multiply(hoursCharged.toBigDecimal())
     }
 
-    private fun calculatePercentage(spot: SpotEntity, allSpotsCount: Int): Pair<BigDecimal, BigDecimal> {
-        val spotsSectorCount = spotRepository.countBySectorAndIsTaken(spot.sector, true)
+    private fun calculatePercentage(spot: SpotEntity): Pair<BigDecimal, BigDecimal> {
+        val allSpotsCount = spotRepository.findAll().count()
+        val spotsSectorCount = spotRepository.countByIsTaken(true)
 
         val sectorOccupationPercent = (spotsSectorCount.toBigDecimal() * allSpotsCount.toBigDecimal()) / BigDecimal(100)
 
