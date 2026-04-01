@@ -25,6 +25,9 @@ class ParkingRegistryService(
     companion object {
         private val LOG = LoggerFactory.getLogger(ParkingRegistryService::class.java)
         const val MINIMUM_FREE_TIME = 30L
+        val TWENTY_FIVE_PERCENT = BigDecimal(25)
+        val FIFTY_PERCENT = BigDecimal(50)
+        val SEVENTY_PERCENT = BigDecimal(75)
     }
 
     @Transactional
@@ -141,9 +144,9 @@ class ParkingRegistryService(
         var increase = BigDecimal.ZERO
 
         when {
-            sectorOccupationPercent < BigDecimal(25) -> discount = BigDecimal("0.10")
-            sectorOccupationPercent <= BigDecimal(50) -> discount = BigDecimal.ZERO
-            sectorOccupationPercent <= BigDecimal(75) -> increase = BigDecimal("0.10")
+            sectorOccupationPercent < TWENTY_FIVE_PERCENT -> discount = BigDecimal("0.10")
+            sectorOccupationPercent <= FIFTY_PERCENT -> discount = BigDecimal.ZERO
+            sectorOccupationPercent <= SEVENTY_PERCENT -> increase = BigDecimal("0.10")
             else -> increase = BigDecimal("0.25")
         }
 

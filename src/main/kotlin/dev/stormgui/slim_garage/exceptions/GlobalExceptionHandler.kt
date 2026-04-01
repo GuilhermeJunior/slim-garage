@@ -21,7 +21,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(FullGarageException::class)
     fun handleFullGarageException(exception: FullGarageException): ResponseEntity<ErrorResponse> {
         val errorResponse = ErrorResponse(
-            status = HttpStatus.UNPROCESSABLE_ENTITY.value(),
+            status = HttpStatus.UNPROCESSABLE_CONTENT.value(),
             message = exception.message ?: "Garagem cheia, nenhuma vaga disponível",
             timestamp = System.currentTimeMillis()
         )
